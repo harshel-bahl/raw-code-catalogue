@@ -153,7 +153,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:v
 .content .toolbar{margin-top:0}
 aside.filters{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;padding:4px 4px 16px 0;font-size:13px;overscroll-behavior:contain}
 .fhead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0 10px;border-bottom:1px solid var(--line)}
-.fhead h2{font-size:15px}
+.fhead h2{font-size:17px}
 .fbtn{font:inherit;font-size:12.5px;padding:5px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);cursor:pointer}
 .fbtn.link{border:0;background:none;color:var(--accent);padding:4px 0}
 .fbtn[disabled]{opacity:.45;cursor:default}
@@ -178,14 +178,16 @@ aside.filters{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-
 .src.nomatch .nomatch-note{display:block}
 .src.nomatch{padding-top:14px}
 .ftoggle{display:none}
+.tfilters{display:none;font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--bg);cursor:pointer}
 @media (max-width:1100px){
   .layout{grid-template-columns:1fr;gap:0}
   aside.filters{position:static;max-height:none;overflow:visible;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding-inline:14px}
   .ftoggle{display:inline-block}
-  aside.filters:not(.open) .fbody{display:none}
-  aside.filters .fhead{border-bottom:0}
-  aside.filters.open .fhead{border-bottom:1px solid var(--line)}
-  .fbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));column-gap:20px}
+  aside.filters.closed .fbody{display:none}
+  aside.filters.closed .fhead{border-bottom:0}
+  .tfilters{display:inline-block}
+  .fbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));column-gap:20px;align-items:start}
+  .fbody .fgroup{align-content:start}
   .content .toolbar{margin-top:12px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
@@ -207,6 +209,7 @@ aside.filters{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-
   <aside class="filters" id="filters" aria-label="Filters"></aside>
   <div class="content">
   <div class="toolbar" role="search">
+    <button type="button" class="tfilters" id="tfilters">Filters</button>
     <input type="search" id="q" placeholder="Search titles, descriptions, languages, frameworks…" aria-label="Search repositories">
     <div class="seg" id="srcfilter" aria-label="Filter by source"></div>
     <select id="sort" aria-label="Sort repositories">
@@ -526,7 +529,7 @@ function facetValues(key){
 const FACETS=[["type","Repository type","type",0],["lang","Programming language","langs",10],["fw","Framework & engine","fw",10],["size","Size","size",0],["i18n","Language support (i18n)","i18n",0]];
 function buildFilters(){
   const el=$("#filters");
-  let h=`<div class="fhead"><h2>Filters</h2><span><button type="button" class="fbtn link" id="fclear" disabled>Clear all</button> <button type="button" class="fbtn ftoggle" id="ftoggle" aria-expanded="false">Show</button></span></div><div class="fbody">`;
+  let h=`<div class="fhead"><h2>Filters</h2><span><button type="button" class="fbtn link" id="fclear" disabled>Clear all</button> <button type="button" class="fbtn ftoggle" id="ftoggle" aria-expanded="true">Hide</button></span></div><div class="fbody">`;
   for(const [key,label,src,lim] of FACETS){
     let vals=facetValues(src);
     if(key==="size")vals=SIZES.map(s=>s[0]);
@@ -567,8 +570,9 @@ function buildFilters(){
     const m=e.target.closest("[data-more]");
     if(m){el.querySelectorAll(`.opt[data-facet="${m.dataset.more}"][data-extra]`).forEach(o=>o.hidden=false);m.remove();return}
     if(e.target.id==="fclear"){clearF();return}
-    if(e.target.id==="ftoggle"){const o=el.classList.toggle("open");e.target.setAttribute("aria-expanded",o);e.target.textContent=o?"Hide":"Show"}
+    if(e.target.id==="ftoggle"){const c=el.classList.toggle("closed");e.target.setAttribute("aria-expanded",!c);updateFilters()}
   });
+  $("#tfilters").addEventListener("click",()=>{el.classList.remove("closed");updateFilters();el.scrollIntoView({block:"start"})});
   $("#active").addEventListener("click",e=>{
     const c=e.target.closest(".achip");if(!c)return;const f=state.f,[k,v]=[c.dataset.k,c.dataset.v];
     if(f[k] instanceof Set)f[k].delete(v);else if(k==="mainOnly")f.mainOnly=false;else f[k]=typeof f[k]==="number"?0:"";
@@ -604,7 +608,7 @@ function updateFilters(){
   $("#active").innerHTML=chips.length?chips.join("")+`<button type="button" class="fbtn link" id="aclear">Clear all</button>`:"";
   const ac=$("#aclear");if(ac)ac.onclick=clearF;
   $("#fclear").disabled=!chips.length;
-  const n=chips.length;$("#ftoggle").textContent=($("#filters").classList.contains("open")?"Hide":"Show")+(n?` (${n})`:"");
+  const n=chips.length;$("#ftoggle").textContent=($("#filters").classList.contains("closed")?"Show":"Hide");$("#tfilters").textContent="Filters"+(n?` (${n})`:"");
 }
 function matchQ(r){
   const s=DATA.sources.find(s=>s.id===r._f.sid);
